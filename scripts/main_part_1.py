@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from scripts.part_1_functions import (
+from part_1_functions import (
     airports as airports_csv,
     plot_route_from_nyc,
     plot_routes_from_nyc,

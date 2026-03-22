@@ -2,13 +2,13 @@ import sqlite3
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from scripts.part_1_functions import (
+from part_1_functions import (
     airports as airports_csv,
     plot_routes_from_nyc,
     compute_euclidean_to_jfk,
     compute_geo_distance
 )
-from scripts.part_3_functions import (
+from part_3_functions import (
     plot_flights_from_nyc_day,
     flight_statistics_for_day,
     plane_types_for_route,

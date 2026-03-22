@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from datetime import timedelta
-from scripts.part_1_functions import (
+from part_1_functions import (
     plot_routes_from_nyc,
 )
-from scripts.part_4_functions import (
+from part_4_functions import (
     format_time,
     check_data_consistency,
     airport_delay_summary,
