@@ -1,8 +1,12 @@
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from scripts.part_1_functions import plot_routes_from_nyc
- 
+import sqlite3
+from part_1_functions import plot_routes_from_nyc
+
+connection = sqlite3.connect("data/flights_database.db")
+cursor = connection.cursor()
+
 # plot all destinations from a NYC airport on a given day
 def plot_flights_from_nyc_day(connection, month, day, origin_airport):
     cursor = connection.cursor()

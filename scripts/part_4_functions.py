@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
+import sqlite3
  
+connection = sqlite3.connect("data/flights_database.db")
+cursor = connection.cursor()
+
 # convert a numeric time like 517.0 into a string '0517' for datetime parsing. Handles 2400 as midnight (0000).
 def format_time(t):
     if pd.isna(t):
