@@ -22,7 +22,7 @@ from scripts.part_3_functions import (
 # PART 3 — Interacting with the database
 # ===================================================
 
-connection = sqlite3.connect("flights_database.db")
+connection = sqlite3.connect("data/flights_database.db")
 cursor = connection.cursor()
 
 # load JFK flights for distance verification
@@ -40,7 +40,7 @@ cursor.execute(query)
 rows = cursor.fetchall()
 airports_db = pd.DataFrame(rows, columns=[x[0] for x in cursor.description])
 
-# JFK coordinates from DB
+# JFK coordinates from database
 jfk_row = airports_db[airports_db["faa"].str.upper() == "JFK"]
 JFK_LAT = float(jfk_row.iloc[0]["lat"])
 JFK_LON = float(jfk_row.iloc[0]["lon"])
