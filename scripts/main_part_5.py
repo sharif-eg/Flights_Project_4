@@ -144,7 +144,7 @@ with st.sidebar:
     page = st.radio(
         "Sections",
         ["Overview", "Route Analysis", "Delay Analysis",
-         "Daily Statistics", "Fleet & Airlines"]
+         "Daily Statistics", "Fleet & Airlines", "Extra Insights"]
     )
     origin_list = sorted(flights["origin"].dropna().unique())
     dest_list = sorted(flights["dest"].dropna().unique())
@@ -501,3 +501,115 @@ elif page == "Fleet & Airlines":
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
         st.info("Select a specific arrival airport to see the top 5 manufacturers for that destination.")
+
+
+# Extra Insights
+# ===================================================
+
+elif page == "Extra Insights":
+    st.title("Extra Insights")
+    st.markdown("Additional analyses exploring delays, weather impact, and fleet characteristics.")
+
+    # worst month for delays
+    st.subheader("Worst Month for Delays")
+    avg_delay_month = df.groupby("month")["arr_delay"].mean().reset_index()
+    avg_delay_month.columns = ["month", "avg_arr_delay"]
+    worst_month = avg_delay_month.loc[avg_delay_month["avg_arr_delay"].idxmax()]
+
+    st.metric("Worst Month", f"Month {int(worst_month['month'])}", f"{worst_month['avg_arr_delay']:.2f} min avg delay")
+    fig = px.bar(avg_delay_month, x="month", y="avg_arr_delay",
+                 title="Average Arrival Delay per Month",
+                 labels={"month": "Month", "avg_arr_delay": "Average Arrival Delay (min)"})
+    fig.update_xaxes(dtick=1)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # delays by origin airport
+    st.subheader("Delays by Origin Airport")
+    delay_by_origin = df.groupby("origin").agg(
+        avg_dep_delay=("dep_delay", "mean"),
+        avg_arr_delay=("arr_delay", "mean"),
+        n_flights=("flight", "count")
+    ).reset_index()
+    fig = px.bar(delay_by_origin, x="origin", y=["avg_dep_delay", "avg_arr_delay"], barmode="group",
+                 title="Average Delay by NYC Origin Airport",
+                 labels={"value": "Average Delay (min)", "origin": "Airport"})
+    st.plotly_chart(fig, use_container_width=True)
+    st.dataframe(delay_by_origin.sort_values("avg_dep_delay", ascending=False).round(1), use_container_width=True)
+
+    st.divider()
+
+    # airline weather resilience
+    st.subheader("Airline Weather Resilience")
+    weather_impact = df.groupby(["airline_name", "bad_weather"])["arr_delay"].mean().reset_index()
+    weather_pivot = weather_impact.pivot(index="airline_name", columns="bad_weather", values="arr_delay")
+    weather_pivot.columns = ["clear_delay", "bad_delay"]
+    weather_pivot["delay_increase"] = weather_pivot["bad_delay"] - weather_pivot["clear_delay"]
+    weather_pivot = weather_pivot.dropna().sort_values("delay_increase")
+
+    fig = px.bar(weather_pivot.reset_index(), x="airline_name", y="delay_increase",
+                 title="Extra Delay in Bad Weather per Airline (lower = more resilient)",
+                 labels={"airline_name": "Airline", "delay_increase": "Extra Delay in Bad Weather (min)"})
+    fig.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # plane age vs weather delay
+    st.subheader("Plane Age vs Weather Delay")
+    age_df = df.dropna(subset=["plane_age"]).copy()
+    if len(age_df) > 0:
+        age_df["age_group"] = pd.cut(age_df["plane_age"], bins=[0, 5, 10, 15, 20, 50],
+                                     labels=["0-5 yr", "5-10 yr", "10-15 yr", "15-20 yr", "20+ yr"])
+        age_weather = age_df.dropna(subset=["age_group"]).groupby(
+            ["age_group", "bad_weather"])["arr_delay"].mean().reset_index()
+        age_weather["weather"] = age_weather["bad_weather"].map({True: "Bad Weather", False: "Clear"})
+
+        fig = px.bar(age_weather, x="age_group", y="arr_delay", color="weather", barmode="group",
+                     title="Plane Age vs Arrival Delay in Clear vs Bad Weather",
+                     labels={"age_group": "Plane Age", "arr_delay": "Average Arrival Delay (min)"})
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No plane age data available for the selected filters.")
+
+    st.divider()
+
+    # plane size vs wind delay
+    st.subheader("Plane Size vs Wind Delay")
+    size_df = df.dropna(subset=["seats"]).copy()
+    if len(size_df) > 0:
+        size_df["size_group"] = pd.cut(size_df["seats"], bins=[0, 50, 150, 250, 500],
+                                       labels=["Small (<50)", "Medium (50-150)", "Large (150-250)", "Very Large (>250)"])
+        size_df["windy"] = size_df["wind_speed"] > 20
+        size_wind = size_df.dropna(subset=["size_group"]).groupby(
+            ["size_group", "windy"])["arr_delay"].mean().reset_index()
+        size_wind["condition"] = size_wind["windy"].map({True: "Windy", False: "Calm"})
+
+        fig = px.bar(size_wind, x="size_group", y="arr_delay", color="condition", barmode="group",
+                     title="Plane Size vs Arrival Delay: Windy vs Calm Conditions",
+                     labels={"size_group": "Plane Size", "arr_delay": "Avg Arrival Delay (min)"})
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No seat data available for the selected filters.")
+
+    st.divider()
+
+    # airline fleet age
+    st.subheader("Airline Fleet Age")
+    fleet_df = df.dropna(subset=["plane_age"])
+    if len(fleet_df) > 0:
+        avg_plane_age = fleet_df.groupby("airline_name").agg(
+            avg_plane_age=("plane_age", "mean"),
+            median_plane_age=("plane_age", "median"),
+            n_flights=("flight", "count")
+        ).reset_index().sort_values("avg_plane_age")
+
+        fig = px.bar(avg_plane_age, x="airline_name", y="avg_plane_age",
+                     title="Average Plane Age per Airline (lower = newer fleet)",
+                     labels={"airline_name": "Airline", "avg_plane_age": "Avg Plane Age (years)"})
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(avg_plane_age.round(1), use_container_width=True)
+    else:
+        st.warning("No plane age data available for the selected filters.")
